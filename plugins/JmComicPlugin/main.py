@@ -179,27 +179,52 @@ class JmComicPlugin(NcatBotPlugin):
             await event.reply(f"搜索过程中发生错误: {str(e)}")
 
     @command_registry.command("cover", description="获取指定本子的封面图片")
-    async def jm_cover_cmd(self, event: BaseMessageEvent, album_id: str):
-        """获取指定album_id的封面图片命令"""
+    async def jm_cover_cmd(self, event: BaseMessageEvent, album_ids_str: str):
+        """获取指定album_id的封面图片命令，支持多个本子ID，用逗号或空格分隔"""
         try:
-            if not album_id or not album_id.isdigit():
-                await event.reply("请提供有效的本子ID，例如: /cover 427413")
+            if not album_ids_str:
+                await event.reply(
+                    "请提供有效的本子ID，例如: /cover 427413 或 /cover 114514,233214"
+                )
+                return
+
+            # 按逗号（中英文）和空格分割字符串，得到id列表
+            album_ids = (
+                album_ids_str.replace("，", " ")
+                .replace("、", " ")
+                .replace(",", " ")
+                .split(" ")
+            )
+
+            # 过滤空字符串
+            album_ids = [id.strip() for id in album_ids if id.strip()]
+
+            if not album_ids:
+                await event.reply(
+                    "请提供有效的本子ID，例如: /cover 427413 或 /cover 114514,233214"
+                )
                 return
 
             # 创建JmClient实例
             client = self.jm_option.new_jm_client()
 
-            await event.reply(f"正在获取本子 {album_id} 的封面图片，请稍候...")
+            await event.reply(f"正在获取 {len(album_ids)} 个本子的封面图片，请稍候...")
 
-            # 下载封面
-            cover_path = os.path.join(self.cover_dir, f"{album_id}.jpg")
-            try:
-                client.download_album_cover(album_id, cover_path)
+            # 处理每个album_id
+            for album_id in album_ids:
+                if not album_id or not album_id.isdigit():
+                    await event.reply(f"本子ID {album_id} 无效，请提供数字ID")
+                    continue
 
-                # 发送封面图片
-                await event.reply(MessageChain([Image(cover_path)]))
-            except Exception as e:
-                await event.reply(f"获取封面失败: {str(e)}")
+                # 下载封面
+                cover_path = os.path.join(self.cover_dir, f"{album_id}.jpg")
+                try:
+                    client.download_album_cover(album_id, cover_path)
+
+                    # 发送封面图片
+                    await event.reply(MessageChain([Image(cover_path)]))
+                except Exception as e:
+                    await event.reply(f"获取本子 {album_id} 的封面失败: {str(e)}")
 
         except Exception as e:
             await event.reply(f"执行过程中发生错误: {str(e)}")
