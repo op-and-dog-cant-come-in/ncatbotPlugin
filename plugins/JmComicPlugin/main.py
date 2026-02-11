@@ -3,6 +3,10 @@ import zipfile
 import asyncio
 
 import jmcomic
+from ncatbot.plugin_system import NcatBotPlugin
+from ncatbot.plugin_system import command_registry
+from ncatbot.plugin_system import param
+from ncatbot.core.event import BaseMessageEvent
 from ncatbot.core import GroupMessage, PrivateMessage
 from ncatbot.core import MessageChain, Image
 from ncatbot.core.event import BaseMessageEvent
@@ -66,7 +70,7 @@ class JmComicPlugin(NcatBotPlugin):
         return zip_path
 
     @command_registry.command("jm", description="下载禁漫本子并发送PDF文件")
-    @param(name="album_id", help="本子id")
+    @param(name="album_id", help="本子ID")
     async def jm_download_cmd(self, event: BaseMessageEvent, album_id: str):
         """下载禁漫本子命令"""
         try:
@@ -86,6 +90,7 @@ class JmComicPlugin(NcatBotPlugin):
     @command_registry.command(
         "jmzip", description="下载禁漫本子并发送ZIP压缩包（失败则回退发送PDF）"
     )
+    @param(name="album_id", help="本子ID")
     async def jmzip_download_cmd(self, event: BaseMessageEvent, album_id: str):
         """下载禁漫本子并发送 ZIP"""
         try:
@@ -136,6 +141,8 @@ class JmComicPlugin(NcatBotPlugin):
             await event.reply(f"文件已准备就绪: {file_name}")
 
     @command_registry.command("query", description="根据关键词搜索禁漫本子")
+    @param(name="search_query", help="搜索关键词")
+    @param(name="amount", default=20, help="返回结果数量")
     async def jm_query_cmd(
             self, event: BaseMessageEvent, search_query: str, amount: int = 20
     ):
@@ -180,6 +187,7 @@ class JmComicPlugin(NcatBotPlugin):
             await event.reply(f"搜索过程中发生错误: {str(e)}")
 
     @command_registry.command("cover", description="获取指定本子的封面图片")
+    @param(name="album_ids_str", help="本子ID，多个ID用逗号或空格分隔")
     async def jm_cover_cmd(self, event: BaseMessageEvent, album_ids_str: str):
         """获取指定album_id的封面图片命令，支持多个本子ID，用逗号或空格分隔"""
         try:
@@ -252,6 +260,8 @@ class JmComicPlugin(NcatBotPlugin):
             await event.reply(f"执行过程中发生错误: {str(e)}")
 
     @command_registry.command("rank", description="获取禁漫排行榜信息")
+    @param(name="rank_type", default="month", help="排行榜类型: today, week, month")
+    @param(name="page", default=1, help="页码")
     async def jm_rank_cmd(
             self, event: BaseMessageEvent, rank_type: str = "month", page: int = 1
     ):
