@@ -9,6 +9,7 @@ from ncatbot.core.event import BaseMessageEvent
 from ncatbot.core import GroupMessage, PrivateMessage
 from ncatbot.core import MessageChain, Image
 
+
 class JmComicPlugin(NcatBotPlugin):
     name = "JmComicPlugin"
     version = "0.0.1"
@@ -17,10 +18,12 @@ class JmComicPlugin(NcatBotPlugin):
 
     async def on_load(self):
         # 获取项目根目录
-        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
-        self.base_dir = os.path.join(project_root, 'pdf')
+        project_root = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "../../")
+        )
+        self.base_dir = os.path.join(project_root, "pdf")
         # 创建封面临时目录
-        self.cover_dir = os.path.join(project_root, 'cover')
+        self.cover_dir = os.path.join(project_root, "cover")
         # jmcomic 配置
         config_path = os.path.join(os.path.dirname(__file__), "option.yml")
         self.jm_option = jmcomic.JmOption.from_file(config_path)
@@ -79,7 +82,9 @@ class JmComicPlugin(NcatBotPlugin):
         except Exception as e:
             await event.reply(f"下载过程中发生错误: {str(e)}")
 
-    @command_registry.command("jmzip", description="下载禁漫本子并发送ZIP压缩包（失败则回退发送PDF）")
+    @command_registry.command(
+        "jmzip", description="下载禁漫本子并发送ZIP压缩包（失败则回退发送PDF）"
+    )
     async def jmzip_download_cmd(self, event: BaseMessageEvent, album_id: str):
         """下载禁漫本子并发送 ZIP"""
         try:
@@ -130,28 +135,32 @@ class JmComicPlugin(NcatBotPlugin):
             await event.reply(f"文件已准备就绪: {file_name}")
 
     @command_registry.command("query", description="根据关键词搜索禁漫本子")
-    async def jm_query_cmd(self, event: BaseMessageEvent, search_query: str, amount: int = 20):
+    async def jm_query_cmd(
+        self, event: BaseMessageEvent, search_query: str, amount: int = 20
+    ):
         """搜索禁漫本子命令"""
         try:
             if not search_query:
-                await event.reply("请提供搜索关键词，例如: /query MANA 无修正 或 /query 427413")
+                await event.reply(
+                    "请提供搜索关键词，例如: /query MANA 无修正 或 /query 427413"
+                )
                 return
-            
+
             # 创建JmClient实例
             client = self.jm_option.new_jm_client()
-            
+
             await event.reply(f"正在搜索关键词: {search_query}，请稍候...")
-            
+
             # 搜索漫画
             page = client.search_site(search_query=search_query, page=1)
-            
+
             if page.total == 0:
                 await event.reply(f"未找到与 '{search_query}' 相关的本子")
                 return
-            
+
             # 构建搜索结果消息
             result_msg = f"搜索结果 (共{page.total}个本子，当前第1页):\n\n"
-            
+
             # 只显示前10个结果
             count = 0
 
@@ -160,40 +169,119 @@ class JmComicPlugin(NcatBotPlugin):
                     break
                 result_msg += f"[{album_id}]: {title}\n"
                 count += 1
-            
+
             if page.total > amount:
                 result_msg += f"\n... 还有 {page.total - amount} 个结果未显示"
-            
+
             await event.reply(result_msg)
-            
+
         except Exception as e:
             await event.reply(f"搜索过程中发生错误: {str(e)}")
-    
+
     @command_registry.command("cover", description="获取指定本子的封面图片")
-    async def jm_cover_cmd(self, event: BaseMessageEvent, album_id: str):
-        """获取指定album_id的封面图片命令"""
+    async def jm_cover_cmd(self, event: BaseMessageEvent, album_ids_str: str):
+        """获取指定album_id的封面图片命令，支持多个本子ID，用逗号或空格分隔"""
         try:
-            if not album_id or not album_id.isdigit():
-                await event.reply("请提供有效的本子ID，例如: /cover 427413")
+            if not album_ids_str:
+                await event.reply(
+                    "请提供有效的本子ID，例如: /cover 427413 或 /cover 114514,233214"
+                )
+                return
+
+            # 按逗号（中英文）和空格分割字符串，得到id列表
+            album_ids = (
+                album_ids_str.replace("，", " ")
+                .replace("、", " ")
+                .replace(",", " ")
+                .split(" ")
+            )
+
+            # 过滤空字符串
+            album_ids = [id.strip() for id in album_ids if id.strip()]
+
+            if not album_ids:
+                await event.reply(
+                    "请提供有效的本子ID，例如: /cover 427413 或 /cover 114514,233214"
+                )
                 return
 
             # 创建JmClient实例
             client = self.jm_option.new_jm_client()
-            
-            await event.reply(f"正在获取本子 {album_id} 的封面图片，请稍候...")
-            
-            # 下载封面
-            cover_path = os.path.join(self.cover_dir, f"{album_id}.jpg")
-            try:
-                client.download_album_cover(album_id, cover_path)
-                
-                # 发送封面图片
-                await event.reply(MessageChain([Image(cover_path)]))
-            except Exception as e:
-                await event.reply(f"获取封面失败: {str(e)}")
-                
+
+            await event.reply(f"正在获取 {len(album_ids)} 个本子的封面图片，请稍候...")
+
+            # 处理每个album_id
+            for album_id in album_ids:
+                if not album_id or not album_id.isdigit():
+                    await event.reply(f"本子ID {album_id} 无效，请提供数字ID")
+                    continue
+
+                # 下载封面
+                cover_path = os.path.join(self.cover_dir, f"{album_id}.jpg")
+                try:
+                    client.download_album_cover(album_id, cover_path)
+
+                    # 发送封面图片
+                    await event.reply(MessageChain([Image(cover_path)]))
+                except Exception as e:
+                    await event.reply(f"获取本子 {album_id} 的封面失败: {str(e)}")
+
         except Exception as e:
             await event.reply(f"执行过程中发生错误: {str(e)}")
-            
+
+    @command_registry.command("rank", description="获取禁漫排行榜信息")
+    async def jm_rank_cmd(
+        self, event: BaseMessageEvent, rank_type: str = "month", page: int = 1
+    ):
+        """获取禁漫排行榜信息命令"""
+        try:
+            # 验证参数
+            if page < 1:
+                await event.reply("页码必须大于0")
+                return
+
+            # 验证排行榜类型
+            rank_type = rank_type.lower()
+
+            # 创建JmClient实例
+            client = self.jm_option.new_jm_client()
+
+            await event.reply(f"正在获取{rank_type}排行榜第{page}页，请稍候...")
+
+            if rank_type == "today":
+                rank_page = client.day_ranking(page)
+                rank_name = "日排行"
+            elif rank_type == "month":
+                rank_page = client.month_ranking(page)
+                rank_name = "月排行"
+            elif rank_type == "week":
+                rank_page = client.week_ranking(page)
+                rank_name = "周排行"
+            else:
+                await event.reply(
+                    f"无效的排行榜类型，请选择: today, week, month 之一，当前输入 {rank_type}"
+                )
+                return
+
+            if rank_page.total == 0:
+                await event.reply(f"未找到{rank_name}数据")
+                return
+
+            # 构建排行榜消息
+            result_msg = (
+                f"禁漫{rank_name} (第{page}页，共{rank_page.page_count}页):\n\n"
+            )
+
+            # 显示排行榜前10个结果
+            count = 0
+            for album_id, title in rank_page:
+                if count >= 10:
+                    break
+                result_msg += f"{count + 1}. [{album_id}]: {title}\n"
+                count += 1
+
+            # 发送消息
+            await event.reply(result_msg)
+
         except Exception as e:
-            await event.reply(f"搜索过程中发生错误: {str(e)}")
+            await event.reply(f"获取排行榜过程中发生错误: {str(e)}")
