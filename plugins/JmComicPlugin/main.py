@@ -1,18 +1,18 @@
+import asyncio
 import os
 import zipfile
-import asyncio
 
 import jmcomic
-from ncatbot.plugin_system import NcatBotPlugin
-from ncatbot.plugin_system import command_registry
-from ncatbot.plugin_system import param
-from ncatbot.core.event import BaseMessageEvent
 from ncatbot.core import GroupMessage, PrivateMessage
 from ncatbot.core import MessageChain, Image
 from ncatbot.core.event import BaseMessageEvent
 from ncatbot.plugin_system import NcatBotPlugin, param
 from ncatbot.plugin_system import command_registry
+from ncatbot.utils import get_log
 
+import util.ImageUtil as iu
+
+log = get_log()
 
 class JmComicPlugin(NcatBotPlugin):
     name = "JmComicPlugin"
@@ -248,11 +248,15 @@ class JmComicPlugin(NcatBotPlugin):
             # 所有本子处理完毕后，批量发送成功的封面图片
             if successful_covers:
                 # 创建包含所有图片的MessageChain
-                images = [Image(cover_path) for cover_path in successful_covers]
+                for cover_path in successful_covers:
+                    iu.resize_image(cover_path, cover_path)
+                    log.info(f"图片已保存: {cover_path}")
+                    # self.api.post_group_file_sync(group_id=event.group_id, file = cover_path)
+                images: list[Image] = [Image(cover_path) for cover_path in successful_covers]
                 image_chain = MessageChain(images)
                 # 一次性发送所有图片
                 id = await event.reply(image_chain)
-                print(id)
+                log.info(f"message图片已发送: {id}")
                 await asyncio.sleep(15)
                 await self.api.delete_msg(id)
 
