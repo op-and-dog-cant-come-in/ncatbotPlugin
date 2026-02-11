@@ -1,12 +1,8 @@
-import asyncio
-
 from ncatbot.core.event import BaseMessageEvent
 from ncatbot.plugin_system import NcatBotPlugin
 from ncatbot.plugin_system import command_registry
 from ncatbot.plugin_system import param
-from ncatbot.utils import get_log, status
-from ncatbot.plugin_system import on_group_at
-from ncatbot.core.event import GroupMessageEvent
+from ncatbot.utils import get_log
 
 log = get_log("TestPlugin")
 
@@ -36,21 +32,3 @@ class TestPlugin(NcatBotPlugin):
         # 将所有日志内容拼接为一个字符串
         result = "\n".join(log_contents)
         await  event.reply(result)
-
-    @on_group_at
-    async def handle_group_at(self,event: GroupMessageEvent):
-        """
-        处理群聊中 @ 机器人的事件
-        """
-        commands = command_registry.get_all_commands()
-        log_contents = []  # 用于收集日志内容
-        for value in commands.values():
-            log_content = f"commands:{value.__dict__}"
-            log_contents.append(log_content)
-
-        # 将所有日志内容拼接为一个字符串
-        result = "\n".join(log_contents)
-        message_id = await  event.reply(result)
-        # 等待 5 秒
-        await asyncio.sleep(5)
-        await status.global_api.delete_msg(message_id)
