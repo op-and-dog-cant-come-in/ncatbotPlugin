@@ -5,6 +5,7 @@
 /pdf
 /stock
 /config.yaml
+/cover
 
 # Python cache files
 __pycache__/
