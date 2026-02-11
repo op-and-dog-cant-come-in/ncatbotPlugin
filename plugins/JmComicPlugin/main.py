@@ -9,6 +9,9 @@ from ncatbot.plugin_system import param
 from ncatbot.core.event import BaseMessageEvent
 from ncatbot.core import GroupMessage, PrivateMessage
 from ncatbot.core import MessageChain, Image
+from ncatbot.core.event import BaseMessageEvent
+from ncatbot.plugin_system import NcatBotPlugin, param
+from ncatbot.plugin_system import command_registry
 
 
 class JmComicPlugin(NcatBotPlugin):
@@ -57,10 +60,10 @@ class JmComicPlugin(NcatBotPlugin):
         pdf_name_in_zip = os.path.basename(pdf_path)
 
         with zipfile.ZipFile(
-            zip_path,
-            mode="w",
-            compression=zipfile.ZIP_DEFLATED,
-            compresslevel=9,
+                zip_path,
+                mode="w",
+                compression=zipfile.ZIP_DEFLATED,
+                compresslevel=9,
         ) as zf:
             zf.write(pdf_path, arcname=pdf_name_in_zip)
 
@@ -141,7 +144,7 @@ class JmComicPlugin(NcatBotPlugin):
     @param(name="search_query", help="搜索关键词")
     @param(name="amount", default=20, help="返回结果数量")
     async def jm_query_cmd(
-        self, event: BaseMessageEvent, search_query: str, amount: int = 20
+            self, event: BaseMessageEvent, search_query: str, amount: int = 20
     ):
         """搜索禁漫本子命令"""
         try:
@@ -260,7 +263,7 @@ class JmComicPlugin(NcatBotPlugin):
     @param(name="rank_type", default="month", help="排行榜类型: today, week, month")
     @param(name="page", default=1, help="页码")
     async def jm_rank_cmd(
-        self, event: BaseMessageEvent, rank_type: str = "month", page: int = 1
+            self, event: BaseMessageEvent, rank_type: str = "month", page: int = 1
     ):
         """获取禁漫排行榜信息命令"""
         try:
