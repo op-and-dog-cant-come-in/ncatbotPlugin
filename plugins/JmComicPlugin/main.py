@@ -1,6 +1,6 @@
 import os
 import zipfile
-import tempfile
+import asyncio
 
 import jmcomic
 from ncatbot.plugin_system import NcatBotPlugin
@@ -205,10 +205,10 @@ class JmComicPlugin(NcatBotPlugin):
                 )
                 return
 
-            # 创建JmClient实例
-            client = self.jm_option.new_jm_client()
-
             await event.reply(f"正在获取 {len(album_ids)} 个本子的封面图片，请稍候...")
+
+            # 存储成功下载的封面图片路径
+            successful_covers = []
 
             # 处理每个album_id
             for album_id in album_ids:
@@ -216,15 +216,36 @@ class JmComicPlugin(NcatBotPlugin):
                     await event.reply(f"本子ID {album_id} 无效，请提供数字ID")
                     continue
 
-                # 下载封面
-                cover_path = os.path.join(self.cover_dir, f"{album_id}.jpg")
-                try:
-                    client.download_album_cover(album_id, cover_path)
+                # 为每个封面下载创建独立的JmClient实例
+                client = self.jm_option.new_jm_client()
 
-                    # 发送封面图片
-                    await event.reply(MessageChain([Image(cover_path)]))
-                except Exception as e:
-                    await event.reply(f"获取本子 {album_id} 的封面失败: {str(e)}")
+                # 下载封面，添加自动重试3次
+                cover_path = os.path.join(self.cover_dir, f"{album_id}.jpg")
+                retry_count = 6
+                success = False
+
+                for i in range(retry_count):
+                    try:
+                        client.download_album_cover(album_id, cover_path, "_3x4")
+                        success = True
+                        break
+                    except Exception as e:
+                        continue
+
+                if success:
+                    # 将成功的封面路径添加到列表
+                    successful_covers.append(cover_path)
+
+            # 所有本子处理完毕后，批量发送成功的封面图片
+            if successful_covers:
+                # 创建包含所有图片的MessageChain
+                images = [Image(cover_path) for cover_path in successful_covers]
+                image_chain = MessageChain(images)
+                # 一次性发送所有图片
+                id = await event.reply(image_chain)
+                print(id)
+                await asyncio.sleep(15)
+                await self.api.delete_msg(id)
 
         except Exception as e:
             await event.reply(f"执行过程中发生错误: {str(e)}")
