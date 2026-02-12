@@ -4,3 +4,4 @@ aiohttp
 jmcomic
 img2pdf
 ncatbot
+openai
