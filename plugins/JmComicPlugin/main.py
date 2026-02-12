@@ -2,6 +2,7 @@ import os
 import zipfile
 import asyncio
 
+import img2pdf
 import jmcomic
 from ncatbot.plugin_system import NcatBotPlugin
 from ncatbot.plugin_system import command_registry
@@ -60,10 +61,10 @@ class JmComicPlugin(NcatBotPlugin):
         pdf_name_in_zip = os.path.basename(pdf_path)
 
         with zipfile.ZipFile(
-                zip_path,
-                mode="w",
-                compression=zipfile.ZIP_DEFLATED,
-                compresslevel=9,
+            zip_path,
+            mode="w",
+            compression=zipfile.ZIP_DEFLATED,
+            compresslevel=9,
         ) as zf:
             zf.write(pdf_path, arcname=pdf_name_in_zip)
 
@@ -131,12 +132,16 @@ class JmComicPlugin(NcatBotPlugin):
                 file=file_path,
                 name=file_name,
             )
+
         elif isinstance(event, GroupMessage):
-            await self.api.send_group_file(
+            id = await self.api.send_group_file(
                 group_id=event.group_id,
                 file=file_path,
                 name=file_name,
             )
+
+            await asyncio.sleep(180)
+            await self.api.delete_msg(id)
         else:
             await event.reply(f"文件已准备就绪: {file_name}")
 
@@ -144,7 +149,7 @@ class JmComicPlugin(NcatBotPlugin):
     @param(name="search_query", help="搜索关键词")
     @param(name="amount", default=20, help="返回结果数量")
     async def jm_query_cmd(
-            self, event: BaseMessageEvent, search_query: str, amount: int = 20
+        self, event: BaseMessageEvent, search_query: str, amount: int = 20
     ):
         """搜索禁漫本子命令"""
         try:
@@ -245,25 +250,40 @@ class JmComicPlugin(NcatBotPlugin):
                     # 将成功的封面路径添加到列表
                     successful_covers.append(cover_path)
 
-            # 所有本子处理完毕后，批量发送成功的封面图片
+            # 所有本子处理完毕后，将封面图片打包为PDF并发送
             if successful_covers:
-                # 创建包含所有图片的MessageChain
-                images = [Image(cover_path) for cover_path in successful_covers]
-                image_chain = MessageChain(images)
-                # 一次性发送所有图片
-                id = await event.reply(image_chain)
-                print(id)
-                await asyncio.sleep(15)
-                await self.api.delete_msg(id)
+                # 生成PDF文件名
+                timestamp = int(asyncio.get_event_loop().time())
+                pdf_filename = f"covers_{timestamp}.pdf"
+                pdf_path = os.path.join(self.base_dir, pdf_filename)
+
+                # 使用img2pdf将图片转换为PDF
+                try:
+                    # 确保图片按顺序添加
+                    with open(pdf_path, "wb") as f:
+                        # 按顺序读取图片并添加到PDF
+                        img_paths = [os.path.abspath(img) for img in successful_covers]
+                        # 写入PDF
+                        f.write(img2pdf.convert(img_paths))
+
+                    await self._send_file(event, pdf_path)
+                except Exception as e:
+                    await event.reply(f"生成PDF文件失败: {str(e)}")
+                finally:
+                    # 清理临时封面图片
+                    for cover_path in successful_covers:
+                        if os.path.exists(cover_path):
+                            try:
+                                os.remove(cover_path)
+                            except:
+                                pass
 
         except Exception as e:
             await event.reply(f"执行过程中发生错误: {str(e)}")
 
     @command_registry.command("rank", description="获取禁漫排行榜信息")
-    @param(name="rank_type", default="month", help="排行榜类型: today, week, month")
-    @param(name="page", default=1, help="页码")
     async def jm_rank_cmd(
-            self, event: BaseMessageEvent, rank_type: str = "month", page: int = 1
+        self, event: BaseMessageEvent, rank_type: str = "month", page: int = 1
     ):
         """获取禁漫排行榜信息命令"""
         try:
