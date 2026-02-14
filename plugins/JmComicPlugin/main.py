@@ -1,19 +1,19 @@
+import asyncio
 import os
 import zipfile
-import asyncio
 
 import img2pdf
 import jmcomic
-from ncatbot.plugin_system import NcatBotPlugin
-from ncatbot.plugin_system import command_registry
-from ncatbot.plugin_system import param
-from ncatbot.core.event import BaseMessageEvent
 from ncatbot.core import GroupMessage, PrivateMessage
 from ncatbot.core import MessageChain, Image
 from ncatbot.core.event import BaseMessageEvent
 from ncatbot.plugin_system import NcatBotPlugin, param
 from ncatbot.plugin_system import command_registry
+from ncatbot.utils import get_log
 
+import util.ImageUtil as iu
+
+log = get_log()
 
 class JmComicPlugin(NcatBotPlugin):
     name = "JmComicPlugin"

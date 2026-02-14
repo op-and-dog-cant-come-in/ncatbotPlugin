@@ -14,31 +14,32 @@ async def show_menu(msg: GroupMessageEvent):
     """
     处理群聊中 @ 机器人的事件
     """
-    text = msg.message.concatenate_text()
-    if text.replace(" ", "") != "":
-        return
-    log.info(f"机器人被用户{msg.sender.user_id}@了")
-    commands = command_registry.get_all_commands()
-    log_contents = ["\n🤖 QQ机器人功能菜单 🤖"]  # 用于收集日志内容
-    for value in commands.values():
-        log.info(f"commands:{value.__dict__}")
-        log_content = f"• /{value.name} "
-        for index, types in enumerate(value.args_types):
-            try:
-                element = value.params[index]
-            except IndexError:
-                element = None
-            if element is not None:
-                log_content += f"[{element.description}]"
-            log_content += f"<{types.__name__}> "
-        log_content += f"- {value.description}"
-        log_contents.append(log_content)
+    text = msg.message.concatenate_text().strip()
 
-    # 将所有日志内容拼接为一个字符串
-    result = "\n".join(log_contents)
-    message_id = await  msg.reply(result)
-    # 等待 5 秒
-    # await delete_after_seconds(message_id)
+    # 如果消息不为空，则进行 ai 回复
+    if text == "":
+        log.info(f"机器人被用户{msg.sender.user_id}@了")
+        commands = command_registry.get_all_commands()
+        log_contents = ["\n🤖 QQ机器人功能菜单 🤖"]  # 用于收集日志内容
+        for value in commands.values():
+            log.info(f"commands:{value.__dict__}")
+            log_content = f"• /{value.name} "
+            for index, types in enumerate(value.args_types):
+                try:
+                    element = value.params[index]
+                except IndexError:
+                    element = None
+                if element is not None:
+                    log_content += f"[{element.description}]"
+                log_content += f"<{types.__name__}> "
+            log_content += f"- {value.description}"
+            log_contents.append(log_content)
+
+        # 将所有日志内容拼接为一个字符串
+        result = "\n".join(log_contents)
+        message_id = await msg.reply(result)
+        # 等待 5 秒
+        # await delete_after_seconds(message_id)
 
 
 async def delete_after_seconds(message_id, seconds=5):
