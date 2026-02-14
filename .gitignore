@@ -7,7 +7,12 @@
 /config.yaml
 /cover
 
+/.system-prompts.md
+
 # Python cache files
 __pycache__/
 *.py[cod]
 *$py.class
+preferences.pkl
+volcengine-api-key.txt
+volcengine-video-api-key.txt
