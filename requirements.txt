@@ -5,3 +5,5 @@ jmcomic
 img2pdf
 ncatbot
 openai
+json_repair
+

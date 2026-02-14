@@ -7,6 +7,7 @@ import json
 import pickle
 import os
 import pprint
+from json_repair import repair_json
 
 log = get_log("NekoAssistant")
 
@@ -60,7 +61,7 @@ class NekoAssistant(NcatBotPlugin):
             "Authorization": f"Bearer {self.chat_api_key}",
         }
         data = {
-            "model": "deepseek-v3-2-251201",
+            "model": "doubao-seed-1-8-251228",
             "input": [
                 {
                     "role": "system",
@@ -68,6 +69,7 @@ class NekoAssistant(NcatBotPlugin):
                 },
                 {"role": "user", "content": message},
             ],
+            "thinking": {"type": "disabled"},
             "temperature": 0.8,
             "stream": False,
         }
@@ -75,7 +77,11 @@ class NekoAssistant(NcatBotPlugin):
         async with httpx.AsyncClient() as client:
             response = await client.post(url, headers=headers, json=data)
             response.raise_for_status()
-            response_data = response.json()
+            raw_text = response.text
+            # 使用 json_repair 尝试修复可能损坏的 JSON 字符串
+            repaired_text = repair_json(raw_text)
+            response_data = json.loads(repaired_text)
+            print(response_data)
 
         res_text = response_data["output"][0]["content"][0]["text"]
 
